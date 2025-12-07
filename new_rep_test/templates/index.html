@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Веб-калькулятор</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .calculator {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        input, select, button {
+            padding: 10px;
+            margin: 5px;
+            font-size: 16px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .history {
+            background: #e9e9e9;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .result {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2196F3;
+            margin: 10px 0;
+        }
+        .error {
+            color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <h1>Веб-калькулятор</h1>
+    
+    <div class="calculator">
+        <h2>Калькулятор</h2>
+        <div>
+            <input type="number" id="a" placeholder="Первое число" step="any">
+            <select id="operation">
+                <option value="add">+ (сложение)</option>
+                <option value="subtract">- (вычитание)</option>
+                <option value="multiply">* (умножение)</option>
+                <option value="divide">/ (деление)</option>
+                <option value="power">^ (степень)</option>
+                <option value="root">√ (корень)</option>
+            </select>
+            <input type="number" id="b" placeholder="Второе число" step="any">
+            <button onclick="calculate()">Вычислить</button>
+        </div>
+        
+        <div class="result" id="result"></div>
+        <div class="error" id="error"></div>
+    </div>
+    
+    <div class="history">
+        <h2>История вычислений (последние 10)</h2>
+        <button onclick="clearHistory()">Очистить историю</button>
+        <div id="history">
+            {% if history %}
+                {% for calc in history|reverse %}
+                    <div>{{ calc.a }} {{ calc.operation }} {{ calc.b }} = {{ calc.result }}</div>
+                {% endfor %}
+            {% else %}
+                <div>История пуста</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        function calculate() {
+            const a = document.getElementById('a').value;
+            const b = document.getElementById('b').value;
+            const operation = document.getElementById('operation').value;
+            
+            fetch(`/api/calculate?a=${a}&b=${b}&operation=${operation}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        document.getElementById('error').textContent = 'Ошибка: ' + data.error;
+                        document.getElementById('result').textContent = '';
+                    } else {
+                        document.getElementById('result').textContent = 
+                            `${data.a} ${data.operation} ${data.b} = ${data.result}`;
+                        document.getElementById('error').textContent = '';
+                        // Обновляем историю
+                        loadHistory();
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('error').textContent = 'Ошибка подключения';
+                });
+        }
+        
+        function loadHistory() {
+            fetch('/api/history?limit=10')
+                .then(response => response.json())
+                .then(data => {
+                    const historyDiv = document.getElementById('history');
+                    historyDiv.innerHTML = '';
+                    data.history.reverse().forEach(calc => {
+                        historyDiv.innerHTML += 
+                            `<div>${calc.a} ${calc.operation} ${calc.b} = ${calc.result}</div>`;
+                    });
+                });
+        }
+        
+        function clearHistory() {
+            fetch('/api/history/clear', { method: 'POST' })
+                .then(response => response.json())
+                .then(() => {
+                    document.getElementById('history').innerHTML = '<div>История пуста</div>';
+                });
+        }
+    </script>
+</body>
+</html>
