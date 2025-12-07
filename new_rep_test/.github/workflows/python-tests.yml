@@ -14,13 +14,19 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Show project structure
+    - name: Debug - Show ALL files recursively
       run: |
-        echo "=== Root directory ==="
-        pwd
-        ls -la
-        echo "=== new_rep_test folder ==="
-        ls -la new_rep_test/
+        echo "=== Full structure ==="
+        find . -type f -name "*.txt" -o -name "*.py" | sort
+        echo "=== Checking new_rep_test ==="
+        if [ -d "new_rep_test" ]; then
+          echo "new_rep_test exists!"
+          ls -la new_rep_test/
+        else
+          echo "new_rep_test NOT found!"
+          echo "Available folders:"
+          ls -la
+        fi
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -29,22 +35,28 @@ jobs:
 
     - name: Install dependencies
       run: |
-        cd new_rep_test
-        python -m pip install --upgrade pip
-        if [ -f requirements.txt ]; then
+        # Проверяем, где лежит requirements.txt
+        if [ -f "requirements.txt" ]; then
+          echo "Found requirements.txt in root"
+          pip install -r requirements.txt
+        elif [ -f "new_rep_test/requirements.txt" ]; then
+          echo "Found requirements.txt in new_rep_test/"
+          cd new_rep_test
           pip install -r requirements.txt
         else
-          echo "WARNING: requirements.txt not found in new_rep_test/"
+          echo "ERROR: requirements.txt not found anywhere!"
+          echo "Installing only Flask for testing..."
+          pip install flask pytest coverage
         fi
 
-    - name: Run tests with unittest
+    - name: Run tests
       run: |
-        cd new_rep_test
-        echo "Running tests with unittest..."
-        python -m unittest discover -s . -p "test*.py" -v || echo "Unittest finished"
-
-    - name: Run tests with pytest
-      run: |
-        cd new_rep_test
-        echo "Running tests with pytest..."
-        python -m pytest test*.py -v || echo "Pytest: no tests found"
+        # Ищем тестовые файлы
+        echo "=== Looking for test files ==="
+        find . -name "test*.py" -type f
+        
+        echo "=== Running tests ==="
+        # Пробуем из разных мест
+        python -m pytest test_app.py -v || echo "Test 1 failed"
+        python -m pytest new_rep_test/test_app.py -v || echo "Test 2 failed"
+        python -m unittest discover -v || echo "Test 3 failed"
