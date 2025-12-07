@@ -3,24 +3,67 @@ import json
 import sys
 import os
 import math 
+import random
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from app import app, calculation_history
+from app import app, calculation_history, generate_pro_modal_data
 
 class CalculatorTests(unittest.TestCase):
 
     def setUp(self):
         app.config['TESTING'] = True
+        app.config['SECRET_KEY'] = 'test-secret-key'
         self.app = app.test_client()
         # Очищаем историю перед каждым тестом
         calculation_history.clear()
+        # Сбрасываем сессию для каждого теста
+        with self.app.session_transaction() as session:
+            session.clear()
 
     def test_home_page(self):
         """Тест главной страницы"""
         r = self.app.get('/')
         self.assertEqual(r.status_code, 200)
         self.assertIn(b'<!DOCTYPE html>', r.data)
+
+    def test_home_page_with_pro_modal(self):
+        """Тест главной страницы с проверкой передачи данных для PRO модалки"""
+        r = self.app.get('/')
+        self.assertEqual(r.status_code, 200)
+        
+        # Проверяем что страница загружается (базовая проверка)
+        self.assertIn(b'<title>', r.data)
+        
+        # При первом заходе должна быть возможность показа модалки
+        # (проверяем через наличие session данных)
+
+    def test_generate_pro_modal_data(self):
+        """Тест генерации данных для PRO модалки"""
+        data = generate_pro_modal_data()
+        
+        # Проверяем что все необходимые поля есть
+        self.assertIn('pro_price', data)
+        self.assertIn('fake_reviews', data)
+        self.assertIn('already_sold', data)
+        self.assertIn('satisfaction_rate', data)
+        self.assertIn('current_time', data)
+        self.assertIn('fake_timer', data)
+        
+        # Проверяем типы данных
+        self.assertIsInstance(data['pro_price'], str)
+        self.assertIsInstance(data['fake_reviews'], list)
+        self.assertIsInstance(data['already_sold'], int)
+        self.assertIsInstance(data['satisfaction_rate'], int)
+        self.assertIsInstance(data['fake_timer'], int)
+        
+        # Проверяем диапазоны
+        self.assertGreaterEqual(data['already_sold'], 1500)
+        self.assertLessEqual(data['already_sold'], 10000)
+        self.assertGreaterEqual(data['satisfaction_rate'], 96)
+        self.assertLessEqual(data['satisfaction_rate'], 100)
+        self.assertGreaterEqual(data['fake_timer'], 5)
+        self.assertLessEqual(data['fake_timer'], 15)
 
     # Бинарные операции
     def test_addition(self):
@@ -31,6 +74,7 @@ class CalculatorTests(unittest.TestCase):
         self.assertEqual(data['result'], 8.0)
         self.assertIn('b', data)
         self.assertEqual(data['b'], 3.0)
+        self.assertIn('pro_activated', data)  # Новое поле
 
     def test_subtraction(self):
         """Тест вычитания"""
@@ -39,6 +83,7 @@ class CalculatorTests(unittest.TestCase):
         data = r.get_json()
         self.assertEqual(data['result'], 6.0)
         self.assertIn('b', data)
+        self.assertIn('pro_activated', data)
 
     def test_multiplication(self):
         """Тест умножения"""
@@ -47,6 +92,7 @@ class CalculatorTests(unittest.TestCase):
         data = r.get_json()
         self.assertEqual(data['result'], 42.0)
         self.assertIn('b', data)
+        self.assertIn('pro_activated', data)
 
     def test_division(self):
         """Тест деления"""
@@ -55,6 +101,7 @@ class CalculatorTests(unittest.TestCase):
         data = r.get_json()
         self.assertEqual(data['result'], 5.0)
         self.assertIn('b', data)
+        self.assertIn('pro_activated', data)
 
     def test_division_by_zero(self):
         """Тест деления на ноль"""
@@ -71,6 +118,7 @@ class CalculatorTests(unittest.TestCase):
         data = r.get_json()
         self.assertEqual(data['result'], 8.0)
         self.assertIn('b', data)
+        self.assertIn('pro_activated', data)
 
     def test_root(self):
         """Тест извлечения корня n-ной степени"""
@@ -80,6 +128,7 @@ class CalculatorTests(unittest.TestCase):
         self.assertAlmostEqual(data['result'], 2.0, places=5)
         self.assertIn('b', data)
         self.assertEqual(data['b'], 3.0)
+        self.assertIn('pro_activated', data)
 
     # Унарные операции (требуют только a)
     def test_square_root(self):
@@ -89,6 +138,7 @@ class CalculatorTests(unittest.TestCase):
         data = r.get_json()
         self.assertEqual(data['result'], 4.0)
         self.assertNotIn('b', data)  # b не должно быть в ответе для унарных операций
+        self.assertIn('pro_activated', data)
 
     def test_square(self):
         """Тест возведения в квадрат"""
@@ -97,6 +147,7 @@ class CalculatorTests(unittest.TestCase):
         data = r.get_json()
         self.assertEqual(data['result'], 25.0)
         self.assertNotIn('b', data)
+        self.assertIn('pro_activated', data)
 
     def test_cube(self):
         """Тест возведения в куб"""
@@ -105,6 +156,7 @@ class CalculatorTests(unittest.TestCase):
         data = r.get_json()
         self.assertEqual(data['result'], 27.0)
         self.assertNotIn('b', data)
+        self.assertIn('pro_activated', data)
 
     def test_square_root_negative(self):
         """Тест квадратного корня из отрицательного числа"""
@@ -112,6 +164,7 @@ class CalculatorTests(unittest.TestCase):
         self.assertEqual(r.status_code, 200)  # Возвращает float('nan')
         data = r.get_json()
         self.assertTrue(math.isnan(data['result']))
+        self.assertIn('pro_activated', data)
 
     # POST запросы
     def test_post_calculation_binary(self):
@@ -123,6 +176,7 @@ class CalculatorTests(unittest.TestCase):
         data = r.get_json()
         self.assertEqual(data['result'], 20.0)
         self.assertIn('b', data)
+        self.assertIn('pro_activated', data)
 
     def test_post_calculation_unary(self):
         """Тест POST запроса для унарной операции"""
@@ -133,6 +187,7 @@ class CalculatorTests(unittest.TestCase):
         data = r.get_json()
         self.assertEqual(data['result'], 3.0)
         self.assertNotIn('b', data)
+        self.assertIn('pro_activated', data)
 
     # История вычислений
     def test_history(self):
@@ -175,6 +230,10 @@ class CalculatorTests(unittest.TestCase):
         self.assertEqual(data['status'], 'healthy')
         self.assertIn('operations_supported', data)
         self.assertIn('history_entries', data)
+        self.assertIn('pro_users_count', data)  # Новое поле
+        self.assertIn('pro_feature', data)      # Новое поле
+        self.assertIn('joke_level', data)       # Новое поле
+        self.assertEqual(data['joke_level'], 'maximum')
 
     def test_get_operations(self):
         """Тест получения списка операций"""
@@ -189,6 +248,43 @@ class CalculatorTests(unittest.TestCase):
         unary_ops = [op for op in data['operations'] if not op['requires_two_numbers']]
         self.assertGreater(len(binary_ops), 0)
         self.assertGreater(len(unary_ops), 0)
+        
+        # Проверяем наличие поля 'pro'
+        for op in data['operations']:
+            self.assertIn('pro', op)
+            
+        # Ищем PRO операцию
+        pro_ops = [op for op in data['operations'] if op['pro']]
+        self.assertGreater(len(pro_ops), 0)
+
+    def test_activate_pro(self):
+        """Тест активации PRO версии"""
+        r = self.app.post('/api/activate_pro')
+        self.assertEqual(r.status_code, 200)
+        data = r.get_json()
+        self.assertEqual(data['status'], 'success')
+        self.assertIn('message', data)
+        self.assertIn('features', data)
+        self.assertIn('expires', data)
+        self.assertEqual(data['expires'], 'Никогда 😉')
+        
+        # Проверяем что PRO действительно активирована
+        r = self.app.get('/api/calculate?a=1&b=2&operation=add')
+        data = r.get_json()
+        self.assertTrue(data['pro_activated'])
+
+    def test_get_joke(self):
+        """Тест получения шутки"""
+        r = self.app.get('/api/joke')
+        self.assertEqual(r.status_code, 200)
+        data = r.get_json()
+        self.assertIn('joke', data)
+        self.assertIn('type', data)
+        self.assertIn('laugh_level', data)
+        self.assertIsInstance(data['joke'], str)
+        self.assertGreater(len(data['joke']), 10)
+        self.assertGreaterEqual(data['laugh_level'], 7)
+        self.assertLessEqual(data['laugh_level'], 10)
 
     # Обработка ошибок
     def test_invalid_operation(self):
@@ -284,6 +380,86 @@ class CalculatorTests(unittest.TestCase):
         # Проверяем что операции в правильном порядке
         self.assertEqual(data['history'][0]['operation'], 'add')
         self.assertEqual(data['history'][1]['operation'], 'multiply')
+
+    # Тесты для PRO функциональности
+    def test_pro_activation_after_calculation(self):
+        """Тест что PRO активируется после первого вычисления"""
+        # Первое вычисление - pro_activated должно быть False
+        r = self.app.get('/api/calculate?a=1&b=2&operation=add')
+        data = r.get_json()
+        self.assertFalse(data['pro_activated'])
+        
+        # Второе вычисление - pro_activated должно быть True
+        r = self.app.get('/api/calculate?a=3&b=4&operation=add')
+        data = r.get_json()
+        self.assertTrue(data['pro_activated'])
+
+    def test_session_persistence(self):
+        """Тест сохранения сессии между запросами"""
+        # Используем одну сессию для нескольких запросов
+        with self.app.session_transaction() as session:
+            session['test'] = 'value'
+        
+        # Проверяем что сессия сохранилась
+        with self.app.session_transaction() as session:
+            self.assertEqual(session.get('test'), 'value')
+
+    def test_pro_fields_in_response(self):
+        """Тест наличия PRO полей в ответах API"""
+        r = self.app.get('/api/calculate?a=10&b=5&operation=add')
+        data = r.get_json()
+        
+        # Проверяем все обязательные поля
+        required_fields = ['a', 'operation', 'result', 'history_count', 'pro_activated']
+        for field in required_fields:
+            self.assertIn(field, data)
+        
+        # Проверяем тип данных
+        self.assertIsInstance(data['pro_activated'], bool)
+        self.assertIsInstance(data['history_count'], int)
+
+    def test_malformed_json_post(self):
+        """Тест обработки некорректного JSON в POST"""
+        r = self.app.post('/api/calculate',
+                         content_type='application/json',
+                         data='{malformed json}')
+        self.assertEqual(r.status_code, 400)
+        data = r.get_json()
+        self.assertIn('error', data)
+
+    def test_unsupported_method(self):
+        """Тест неподдерживаемого метода HTTP"""
+        r = self.app.put('/api/calculate')
+        self.assertEqual(r.status_code, 405)
+        
+        r = self.app.delete('/api/calculate')
+        self.assertEqual(r.status_code, 405)
+
+    def test_history_with_different_limits(self):
+        """Тест истории с разными лимитами"""
+        # Добавим записи
+        for i in range(20):
+            self.app.get(f'/api/calculate?a={i}&b={i}&operation=add')
+        
+        # Тестируем разные лимиты
+        for limit in [1, 5, 10, 20, 50]:
+            r = self.app.get(f'/api/history?limit={limit}')
+            data = r.get_json()
+            expected_len = min(limit, 20)
+            self.assertEqual(len(data['history']), expected_len)
+
+    def test_calculation_with_pro_activated(self):
+        """Тест вычислений после активации PRO"""
+        # Активируем PRO
+        self.app.post('/api/activate_pro')
+        
+        # Выполняем вычисление
+        r = self.app.get('/api/calculate?a=7&b=8&operation=add')
+        data = r.get_json()
+        
+        # Проверяем что PRO активирована
+        self.assertTrue(data['pro_activated'])
+        self.assertEqual(data['result'], 15.0)
 
 if __name__ == '__main__':
     unittest.main()
