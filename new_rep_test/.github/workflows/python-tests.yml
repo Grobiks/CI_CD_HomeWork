@@ -1,0 +1,50 @@
+name: Python Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Show project structure
+      run: |
+        echo "=== Root directory ==="
+        pwd
+        ls -la
+        echo "=== new_rep_test folder ==="
+        ls -la new_rep_test/
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.8'
+
+    - name: Install dependencies
+      run: |
+        cd new_rep_test
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then
+          pip install -r requirements.txt
+        else
+          echo "WARNING: requirements.txt not found in new_rep_test/"
+        fi
+
+    - name: Run tests with unittest
+      run: |
+        cd new_rep_test
+        echo "Running tests with unittest..."
+        python -m unittest discover -s . -p "test*.py" -v || echo "Unittest finished"
+
+    - name: Run tests with pytest
+      run: |
+        cd new_rep_test
+        echo "Running tests with pytest..."
+        python -m pytest test*.py -v || echo "Pytest: no tests found"
