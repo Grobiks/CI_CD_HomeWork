@@ -11,14 +11,14 @@ app.secret_key = secrets.token_hex(16)  # Для работы сессий
 # Хранилище истории вычислений (в памяти)
 calculation_history: List[Dict[str, Union[str, float, None]]] = []
 
-# Флаг первого вычисления для каждого пользователя (в сессии)
-def is_first_calculation():
-    """Проверяет, было ли первое вычисление у пользователя"""
-    return session.get('first_calculation', True)
+# Счетчик вычислений в сессии для логики PRO активации
+def get_calculation_count():
+    """Возвращает количество вычислений в текущей сессии"""
+    return session.get('calculation_count', 0)
 
-def mark_calculation_done():
-    """Отмечает что первое вычисление выполнено"""
-    session['first_calculation'] = False
+def increment_calculation_count():
+    """Увеличивает счетчик вычислений в сессии"""
+    session['calculation_count'] = get_calculation_count() + 1
 
 def calculate(a: float, b: Optional[float], operation: str) -> float:
     """
@@ -29,7 +29,7 @@ def calculate(a: float, b: Optional[float], operation: str) -> float:
         'add': lambda x, y: x + y,
         'subtract': lambda x, y: x - y,
         'multiply': lambda x, y: x * y,
-        'divide': lambda x, y: x / y if y != 0 else float('inf'),
+        'divide': lambda x, y: x / y,  # Убрали проверку здесь
         'power': lambda x, y: x ** y,
         'root': lambda x, y: x ** (1/y) if y != 0 and x >= 0 else float('nan'),
         'sqrt': lambda x, y: math.sqrt(x) if x >= 0 else float('nan'),
@@ -47,6 +47,10 @@ def calculate(a: float, b: Optional[float], operation: str) -> float:
     # Для бинарных операций проверяем b
     if b is None:
         raise ValueError(f"Для операции '{operation}' требуется второй параметр")
+    
+    # ПРОВЕРКА ДЕЛЕНИЯ НА НОЛЬ - ДОБАВИЛИ ЗДЕСЬ
+    if operation == 'divide' and b == 0:
+        raise ZeroDivisionError("Деление на ноль")
     
     return operations[operation](a, b)
 
@@ -123,7 +127,7 @@ def generate_pro_modal_data():
 @app.route('/')
 def home():
     """Главная страница с веб-интерфейсом калькулятора"""
-    show_pro_modal = is_first_calculation()
+    show_pro_modal = get_calculation_count() == 0
     
     modal_data = {}
     if show_pro_modal:
@@ -164,7 +168,14 @@ def api_calculate():
             if not request.is_json:
                 return jsonify({'error': 'Content-Type должен быть application/json'}), 400
             
-            data = request.get_json()
+            # ПРОВЕРКА НЕКОРРЕКТНОГО JSON - ДОБАВИЛИ
+            try:
+                data = request.get_json()
+                if data is None:
+                    return jsonify({'error': 'Invalid or missing JSON'}), 400
+            except Exception:
+                return jsonify({'error': 'Invalid JSON format'}), 400
+            
             a = float(data.get('a', 0))
             operation = data.get('operation', 'add')
             
@@ -180,9 +191,8 @@ def api_calculate():
         # Выполнение вычисления
         result = calculate(a, b, operation)
         
-        # Помечаем что первое вычисление выполнено
-        if is_first_calculation():
-            mark_calculation_done()
+        # Увеличиваем счетчик вычислений в сессии
+        increment_calculation_count()
         
         # Формируем запись для истории
         history_entry = {
@@ -206,7 +216,8 @@ def api_calculate():
             'display_operation': get_operation_display_name(operation),
             'result': result,
             'history_count': len(calculation_history),
-            'pro_activated': not is_first_calculation(),  # True если PRO активирована
+            # ИЗМЕНИЛИ ЛОГИКУ PRO: активируется после 2+ вычислений
+            'pro_activated': get_calculation_count() >= 2,
         }
         
         if operation not in ['sqrt', 'square', 'cube']:
@@ -256,7 +267,8 @@ def get_operations():
 @app.route('/api/activate_pro', methods=['POST'])
 def activate_pro():
     """Активирует PRO версию для пользователя"""
-    mark_calculation_done()
+    # Устанавливаем счетчик на 2, чтобы PRO активировалась
+    session['calculation_count'] = 2
     return jsonify({
         'status': 'success',
         'message': 'PRO версия активирована!',
@@ -272,7 +284,7 @@ def activate_pro():
 @app.route('/health', methods=['GET'])
 def health_check():
     """Проверка работоспособности приложения"""
-    pro_users = len([s for s in [session] if not s.get('first_calculation', True)])
+    pro_users = len([s for s in [session] if s.get('calculation_count', 0) >= 2])
     
     return jsonify({
         'status': 'healthy', 
