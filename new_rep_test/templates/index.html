@@ -3,132 +3,474 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Веб-калькулятор</title>
+    <title>Умный калькулятор</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            text-align: center;
+            color: #2d3748;
+            margin-bottom: 30px;
+            font-size: 2.5em;
         }
         .calculator {
-            background: #f5f5f5;
-            padding: 20px;
-            border-radius: 10px;
+            background: #f7fafc;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border: 2px solid #e2e8f0;
+        }
+        h2 {
+            color: #4a5568;
+            margin-top: 0;
+            text-align: center;
+        }
+        .input-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
             margin-bottom: 20px;
         }
         input, select, button {
-            padding: 10px;
-            margin: 5px;
+            padding: 12px 15px;
             font-size: 16px;
+            border: 2px solid #cbd5e0;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        input {
+            flex: 1;
+            min-width: 100px;
+        }
+        select {
+            flex: 1;
+            min-width: 150px;
+            background: white;
         }
         button {
-            background: #4CAF50;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
             cursor: pointer;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            flex: 0.5;
+            min-width: 120px;
         }
         button:hover {
-            background: #45a049;
-        }
-        .history {
-            background: #e9e9e9;
-            padding: 15px;
-            border-radius: 5px;
+            transform: translateY(-2px);
+            box-shadow: 0 7px 14px rgba(102, 126, 234, 0.2);
         }
         .result {
-            font-size: 24px;
+            font-size: 28px;
             font-weight: bold;
-            color: #2196F3;
-            margin: 10px 0;
+            color: #2b6cb0;
+            margin: 15px 0;
+            text-align: center;
+            min-height: 40px;
+            padding: 10px;
+            background: #ebf8ff;
+            border-radius: 8px;
+            border-left: 5px solid #4299e1;
         }
         .error {
-            color: #f44336;
+            color: #e53e3e;
+            text-align: center;
+            margin: 10px 0;
+            min-height: 24px;
+            padding: 8px;
+            background: #fff5f5;
+            border-radius: 6px;
+            border-left: 5px solid #fc8181;
+        }
+        .history {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #e2e8f0;
+        }
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .history-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #68d391;
+            display: flex;
+            justify-content: space-between;
+        }
+        .history-operation {
+            font-weight: bold;
+            color: #4a5568;
+        }
+        .history-result {
+            color: #2b6cb0;
+            font-weight: bold;
+        }
+        .clear-btn {
+            background: #fc8181;
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+        .clear-btn:hover {
+            background: #f56565;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #718096;
+            font-size: 14px;
+        }
+        .operation-info {
+            text-align: center;
+            font-size: 14px;
+            color: #718096;
+            margin-top: 10px;
+            font-style: italic;
         }
     </style>
 </head>
 <body>
-    <h1>Веб-калькулятор</h1>
-    
-    <div class="calculator">
-        <h2>Калькулятор</h2>
-        <div>
-            <input type="number" id="a" placeholder="Первое число" step="any">
-            <select id="operation">
-                <option value="add">+ (сложение)</option>
-                <option value="subtract">- (вычитание)</option>
-                <option value="multiply">* (умножение)</option>
-                <option value="divide">/ (деление)</option>
-                <option value="power">^ (степень)</option>
-                <option value="root">√ (корень)</option>
-            </select>
-            <input type="number" id="b" placeholder="Второе число" step="any">
-            <button onclick="calculate()">Вычислить</button>
+    <div class="container">
+        <h1>🧮 Умный калькулятор</h1>
+        
+        <div class="calculator">
+            <h2>Вычислите выражение</h2>
+            <div class="input-group">
+                <input type="number" id="a" placeholder="Введите число" step="any">
+                <select id="operation" onchange="updateInputs()">
+                    <option value="add">+ Сложение</option>
+                    <option value="subtract">- Вычитание</option>
+                    <option value="multiply">× Умножение</option>
+                    <option value="divide">÷ Деление</option>
+                    <option value="power">^ Возведение в степень</option>
+                    <option value="sqrt">√ Квадратный корень</option>
+                    <option value="root">ⁿ√ Корень n-ной степени</option>
+                    <option value="square">x² Квадрат числа</option>
+                    <option value="cube">x³ Куб числа</option>
+                </select>
+                <input type="number" id="b" placeholder="Второе число" step="any">
+                <button onclick="calculate()">Вычислить</button>
+            </div>
+            
+            <div class="operation-info" id="operationInfo">
+                Выберите операцию для получения подсказки
+            </div>
+            
+            <div class="result" id="result"></div>
+            <div class="error" id="error"></div>
         </div>
         
-        <div class="result" id="result"></div>
-        <div class="error" id="error"></div>
-    </div>
-    
-    <div class="history">
-        <h2>История вычислений (последние 10)</h2>
-        <button onclick="clearHistory()">Очистить историю</button>
-        <div id="history">
-            {% if history %}
-                {% for calc in history|reverse %}
-                    <div>{{ calc.a }} {{ calc.operation }} {{ calc.b }} = {{ calc.result }}</div>
-                {% endfor %}
-            {% else %}
-                <div>История пуста</div>
-            {% endif %}
+        <div class="history">
+            <div class="history-header">
+                <h2 style="margin: 0;">📊 История вычислений</h2>
+                <button class="clear-btn" onclick="clearHistory()">Очистить историю</button>
+            </div>
+            <div id="history">
+                <div style="text-align: center; color: #a0aec0; padding: 20px;">
+                    История пуста. Выполните вычисления чтобы увидеть их здесь.
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Калькулятор с поддержкой 9 операций | Автоматические тесты через GitHub Actions</p>
+            <p><small>Статус API: <span id="apiStatus">Проверка...</span></small></p>
         </div>
     </div>
 
     <script>
+        // Информация об операциях
+        const operationInfo = {
+            'add': 'Сложение двух чисел: a + b',
+            'subtract': 'Вычитание: a - b',
+            'multiply': 'Умножение: a × b',
+            'divide': 'Деление: a ÷ b',
+            'power': 'Возведение в степень: a^b',
+            'sqrt': 'Квадратный корень из числа a',
+            'root': 'Корень n-ной степени: ⁿ√a (b - степень корня)',
+            'square': 'Квадрат числа: a²',
+            'cube': 'Куб числа: a³'
+        };
+
+        function updateInputs() {
+            const operation = document.getElementById('operation').value;
+            const inputA = document.getElementById('a');
+            const inputB = document.getElementById('b');
+            const infoElement = document.getElementById('operationInfo');
+            
+            // Обновляем placeholder для первого поля
+            if (operation === 'sqrt' || operation === 'square' || operation === 'cube') {
+                inputA.placeholder = 'Введите число';
+            } else {
+                inputA.placeholder = 'Первое число (a)';
+            }
+            
+            // Показываем/скрываем второе поле
+            if (operation === 'sqrt' || operation === 'square' || operation === 'cube') {
+                inputB.style.display = 'none';
+                inputB.value = '';
+            } else {
+                inputB.style.display = 'inline-block';
+            }
+            
+            // Меняем placeholder для второго поля
+            if (operation === 'root') {
+                inputB.placeholder = 'Степень корня (n)';
+            } else if (operation === 'power') {
+                inputB.placeholder = 'Степень (b)';
+            } else if (operation === 'divide') {
+                inputB.placeholder = 'Делитель (b)';
+            } else {
+                inputB.placeholder = 'Второе число (b)';
+            }
+            
+            // Показываем подсказку
+            infoElement.textContent = operationInfo[operation] || 'Выберите операцию';
+        }
+
         function calculate() {
             const a = document.getElementById('a').value;
             const b = document.getElementById('b').value;
             const operation = document.getElementById('operation').value;
             
-            fetch(`/api/calculate?a=${a}&b=${b}&operation=${operation}`)
-                .then(response => response.json())
+            // Очищаем предыдущие результаты
+            document.getElementById('error').textContent = '';
+            document.getElementById('result').textContent = 'Вычисление...';
+            
+            // Формируем URL в зависимости от операции
+            let url;
+            if (operation === 'sqrt' || operation === 'square' || operation === 'cube') {
+                if (!a) {
+                    showError('Введите число');
+                    return;
+                }
+                url = `/api/calculate?a=${encodeURIComponent(a)}&operation=${operation}`;
+            } else {
+                if (!a || !b) {
+                    showError('Заполните все поля');
+                    return;
+                }
+                url = `/api/calculate?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}&operation=${operation}`;
+            }
+            
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => {
+                            throw new Error(err.error || `Ошибка ${response.status}`);
+                        });
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.error) {
-                        document.getElementById('error').textContent = 'Ошибка: ' + data.error;
-                        document.getElementById('result').textContent = '';
+                        showError(data.error);
                     } else {
-                        document.getElementById('result').textContent = 
-                            `${data.a} ${data.operation} ${data.b} = ${data.result}`;
-                        document.getElementById('error').textContent = '';
-                        // Обновляем историю
+                        showResult(data);
                         loadHistory();
                     }
                 })
                 .catch(error => {
-                    document.getElementById('error').textContent = 'Ошибка подключения';
+                    showError(error.message || 'Ошибка подключения к серверу');
                 });
         }
-        
+
+        function showResult(data) {
+            const resultElement = document.getElementById('result');
+            let expression = '';
+            
+            // Форматируем вывод в зависимости от операции
+            switch(data.operation) {
+                case 'sqrt':
+                    expression = `√${formatNumber(data.a)} = ${formatNumber(data.result)}`;
+                    break;
+                case 'square':
+                    expression = `${formatNumber(data.a)}² = ${formatNumber(data.result)}`;
+                    break;
+                case 'cube':
+                    expression = `${formatNumber(data.a)}³ = ${formatNumber(data.result)}`;
+                    break;
+                case 'root':
+                    expression = `${data.b}√${formatNumber(data.a)} = ${formatNumber(data.result)}`;
+                    break;
+                case 'power':
+                    expression = `${formatNumber(data.a)}^${data.b} = ${formatNumber(data.result)}`;
+                    break;
+                case 'add':
+                    expression = `${formatNumber(data.a)} + ${formatNumber(data.b)} = ${formatNumber(data.result)}`;
+                    break;
+                case 'subtract':
+                    expression = `${formatNumber(data.a)} - ${formatNumber(data.b)} = ${formatNumber(data.result)}`;
+                    break;
+                case 'multiply':
+                    expression = `${formatNumber(data.a)} × ${formatNumber(data.b)} = ${formatNumber(data.result)}`;
+                    break;
+                case 'divide':
+                    expression = `${formatNumber(data.a)} ÷ ${formatNumber(data.b)} = ${formatNumber(data.result)}`;
+                    break;
+                default:
+                    expression = `${formatNumber(data.result)}`;
+            }
+            
+            resultElement.textContent = expression;
+        }
+
+        function showError(message) {
+            document.getElementById('error').textContent = `❌ ${message}`;
+            document.getElementById('result').textContent = '';
+        }
+
+        function formatNumber(num) {
+            // Форматируем число: убираем лишние нули после запятой
+            const str = String(num);
+            if (str.includes('.')) {
+                return parseFloat(num).toString();
+            }
+            return str;
+        }
+
         function loadHistory() {
             fetch('/api/history?limit=10')
                 .then(response => response.json())
                 .then(data => {
-                    const historyDiv = document.getElementById('history');
-                    historyDiv.innerHTML = '';
-                    data.history.reverse().forEach(calc => {
-                        historyDiv.innerHTML += 
-                            `<div>${calc.a} ${calc.operation} ${calc.b} = ${calc.result}</div>`;
+                    const historyElement = document.getElementById('history');
+                    
+                    if (data.total === 0) {
+                        historyElement.innerHTML = `
+                            <div style="text-align: center; color: #a0aec0; padding: 20px;">
+                                История пуста. Выполните вычисления чтобы увидеть их здесь.
+                            </div>`;
+                        return;
+                    }
+                    
+                    let historyHTML = '';
+                    data.history.reverse().forEach(item => {
+                        let operationText = '';
+                        switch(item.operation) {
+                            case 'sqrt':
+                                operationText = `√${formatNumber(item.a)}`;
+                                break;
+                            case 'square':
+                                operationText = `${formatNumber(item.a)}²`;
+                                break;
+                            case 'cube':
+                                operationText = `${formatNumber(item.a)}³`;
+                                break;
+                            case 'root':
+                                operationText = `${item.b}√${formatNumber(item.a)}`;
+                                break;
+                            case 'power':
+                                operationText = `${formatNumber(item.a)}^${item.b}`;
+                                break;
+                            case 'add':
+                                operationText = `${formatNumber(item.a)} + ${formatNumber(item.b)}`;
+                                break;
+                            case 'subtract':
+                                operationText = `${formatNumber(item.a)} - ${formatNumber(item.b)}`;
+                                break;
+                            case 'multiply':
+                                operationText = `${formatNumber(item.a)} × ${formatNumber(item.b)}`;
+                                break;
+                            case 'divide':
+                                operationText = `${formatNumber(item.a)} ÷ ${formatNumber(item.b)}`;
+                                break;
+                            default:
+                                operationText = `${item.operation}(${formatNumber(item.a)})`;
+                        }
+                        
+                        historyHTML += `
+                            <div class="history-item">
+                                <span class="history-operation">${operationText}</span>
+                                <span class="history-result">= ${formatNumber(item.result)}</span>
+                            </div>`;
                     });
+                    
+                    historyElement.innerHTML = historyHTML;
+                })
+                .catch(error => {
+                    console.error('Ошибка загрузки истории:', error);
                 });
         }
-        
+
         function clearHistory() {
+            if (!confirm('Вы уверены что хотите очистить историю вычислений?')) {
+                return;
+            }
+            
             fetch('/api/history/clear', { method: 'POST' })
                 .then(response => response.json())
-                .then(() => {
-                    document.getElementById('history').innerHTML = '<div>История пуста</div>';
+                .then(data => {
+                    loadHistory();
+                    showNotification('История очищена');
+                })
+                .catch(error => {
+                    showError('Ошибка при очистке истории');
                 });
         }
+
+        function showNotification(message) {
+            const oldError = document.getElementById('error').textContent;
+            document.getElementById('error').textContent = `✅ ${message}`;
+            setTimeout(() => {
+                document.getElementById('error').textContent = oldError;
+            }, 3000);
+        }
+
+        function checkAPIStatus() {
+            fetch('/health')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('apiStatus').innerHTML = 
+                        `<span style="color: #38a169;">✓ Работает (${data.operations_supported} операций)</span>`;
+                })
+                .catch(() => {
+                    document.getElementById('apiStatus').innerHTML = 
+                        '<span style="color: #e53e3e;">✗ Недоступен</span>';
+                });
+        }
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            updateInputs();
+            loadHistory();
+            checkAPIStatus();
+            
+            // Автофокус на первое поле
+            document.getElementById('a').focus();
+            
+            // Обработка нажатия Enter
+            document.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    calculate();
+                }
+            });
+        });
     </script>
 </body>
 </html>
