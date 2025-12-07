@@ -3,30 +3,13 @@ name: Python Tests
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
 
 jobs:
   test:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Debug - Show ALL files recursively
-      run: |
-        echo "=== Full structure ==="
-        find . -type f -name "*.txt" -o -name "*.py" | sort
-        echo "=== Checking new_rep_test ==="
-        if [ -d "new_rep_test" ]; then
-          echo "new_rep_test exists!"
-          ls -la new_rep_test/
-        else
-          echo "new_rep_test NOT found!"
-          echo "Available folders:"
-          ls -la
-        fi
+    - uses: actions/checkout@v4
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -34,29 +17,20 @@ jobs:
         python-version: '3.8'
 
     - name: Install dependencies
+      working-directory: ./new_rep_test  # ← КЛЮЧЕВОЕ ИЗМЕНЕНИЕ!
       run: |
-        # Проверяем, где лежит requirements.txt
-        if [ -f "requirements.txt" ]; then
-          echo "Found requirements.txt in root"
-          pip install -r requirements.txt
-        elif [ -f "new_rep_test/requirements.txt" ]; then
-          echo "Found requirements.txt in new_rep_test/"
-          cd new_rep_test
-          pip install -r requirements.txt
-        else
-          echo "ERROR: requirements.txt not found anywhere!"
-          echo "Installing only Flask for testing..."
-          pip install flask pytest coverage
-        fi
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install coverage
 
     - name: Run tests
+      working-directory: ./new_rep_test  # ← Тоже здесь работаем!
       run: |
-        # Ищем тестовые файлы
-        echo "=== Looking for test files ==="
-        find . -name "test*.py" -type f
-        
-        echo "=== Running tests ==="
-        # Пробуем из разных мест
-        python -m pytest test_app.py -v || echo "Test 1 failed"
-        python -m pytest new_rep_test/test_app.py -v || echo "Test 2 failed"
-        python -m unittest discover -v || echo "Test 3 failed"
+        coverage run -m pytest test_app.py -v
+        coverage report
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: new_rep_test/coverage.xml
