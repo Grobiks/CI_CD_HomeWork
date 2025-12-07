@@ -23,7 +23,7 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          coverage run -m unittest test_app.py  # Изменили здесь!
+          coverage run -m unittest test_app.py
 
       - name: Show coverage report
         run: coverage report
