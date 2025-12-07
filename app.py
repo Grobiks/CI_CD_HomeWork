@@ -29,7 +29,7 @@ def calculate(a: float, b: Optional[float], operation: str) -> float:
         'add': lambda x, y: x + y,
         'subtract': lambda x, y: x - y,
         'multiply': lambda x, y: x * y,
-        'divide': lambda x, y: x / y,  # Убрали проверку здесь
+        'divide': lambda x, y: x / y,
         'power': lambda x, y: x ** y,
         'root': lambda x, y: x ** (1/y) if y != 0 and x >= 0 else float('nan'),
         'sqrt': lambda x, y: math.sqrt(x) if x >= 0 else float('nan'),
@@ -48,7 +48,7 @@ def calculate(a: float, b: Optional[float], operation: str) -> float:
     if b is None:
         raise ValueError(f"Для операции '{operation}' требуется второй параметр")
     
-    # ПРОВЕРКА ДЕЛЕНИЯ НА НОЛЬ - ДОБАВИЛИ ЗДЕСЬ
+    # ПРОВЕРКА ДЕЛЕНИЯ НА НОЛЬ
     if operation == 'divide' and b == 0:
         raise ZeroDivisionError("Деление на ноль")
     
@@ -73,15 +73,15 @@ def generate_pro_modal_data():
     """Генерирует случайные данные для PRO модалки"""
     # Случайные цены с разной вероятностью
     prices = [
-        ('$0.00', 30),  # 30% вероятность
-        ('$0.01', 20),  # 20% вероятность
-        ('$1.99', 15),  # 15% вероятность
-        ('$4.99', 10),  # 10% вероятность
-        ('$9.99', 8),   # 8% вероятность
-        ('$19.99', 6),  # 6% вероятность
-        ('$99.99', 5),  # 5% вероятность
-        ('$999.99', 4), # 4% вероятность
-        ('БЕСПЛАТНО', 2), # 2% вероятность
+        ('$0.00', 30),
+        ('$0.01', 20),
+        ('$1.99', 15),
+        ('$4.99', 10),
+        ('$9.99', 8),
+        ('$19.99', 6),
+        ('$99.99', 5),
+        ('$999.99', 4),
+        ('БЕСПЛАТНО', 2),
     ]
     
     # Выбираем цену по весам
@@ -121,28 +121,22 @@ def generate_pro_modal_data():
         'already_sold': already_sold,
         'satisfaction_rate': satisfaction_rate,
         'current_time': datetime.now().strftime("%H:%M"),
-        'fake_timer': random.randint(5, 15),  # Случайное время для таймера
+        'fake_timer': random.randint(5, 15),
     }
 
 @app.route('/')
 def home():
     """Главная страница с веб-интерфейсом калькулятора"""
-    show_pro_modal = get_calculation_count() == 0
-    
-    modal_data = {}
-    if show_pro_modal:
-        modal_data = generate_pro_modal_data()
-    
+    # НЕ показываем модалку при заходе на сайт
+    # Модалка будет показываться только при первом вычислении через API
     return render_template('index.html', 
                          history=calculation_history[-10:],
-                         show_pro_modal=show_pro_modal,
-                         **modal_data)
+                         show_pro_modal=False)  # Всегда false на главной странице
 
 @app.route('/api/calculate', methods=['GET', 'POST'])
 def api_calculate():
     """
     API endpoint для калькулятора
-    
     GET параметры: 
       - a: число (обязательно)
       - b: число (необязательно для унарных операций)
@@ -154,7 +148,6 @@ def api_calculate():
             a = float(request.args.get('a', 0))
             operation = request.args.get('operation', 'add')
             
-            # Определяем, нужно ли значение b
             if operation in ['sqrt', 'square', 'cube']:
                 b = None
                 b_value = None
@@ -168,7 +161,6 @@ def api_calculate():
             if not request.is_json:
                 return jsonify({'error': 'Content-Type должен быть application/json'}), 400
             
-            # ПРОВЕРКА НЕКОРРЕКТНОГО JSON - ДОБАВИЛИ
             try:
                 data = request.get_json()
                 if data is None:
@@ -188,6 +180,9 @@ def api_calculate():
         else:
             return jsonify({'error': 'Метод не поддерживается'}), 405
         
+        # ВАЖНО: Проверяем ДО вычисления, первое ли это вычисление
+        is_first_calculation = get_calculation_count() == 0
+        
         # Выполнение вычисления
         result = calculate(a, b, operation)
         
@@ -203,7 +198,6 @@ def api_calculate():
             'timestamp': datetime.now().isoformat()
         }
         
-        # Добавляем b только если операция не унарная
         if operation not in ['sqrt', 'square', 'cube']:
             history_entry['b'] = b_value
         
@@ -216,9 +210,14 @@ def api_calculate():
             'display_operation': get_operation_display_name(operation),
             'result': result,
             'history_count': len(calculation_history),
-            # ИЗМЕНИЛИ ЛОГИКУ PRO: активируется после 2+ вычислений
             'pro_activated': get_calculation_count() >= 2,
+            # КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: сообщаем фронтенду, нужно ли показать модалку
+            'show_pro_modal': is_first_calculation,
         }
+        
+        # Если нужно показать модалку - добавляем данные для нее
+        if is_first_calculation:
+            response_data['modal_data'] = generate_pro_modal_data()
         
         if operation not in ['sqrt', 'square', 'cube']:
             response_data['b'] = b_value
@@ -267,7 +266,6 @@ def get_operations():
 @app.route('/api/activate_pro', methods=['POST'])
 def activate_pro():
     """Активирует PRO версию для пользователя"""
-    # Устанавливаем счетчик на 2, чтобы PRO активировалась
     session['calculation_count'] = 2
     return jsonify({
         'status': 'success',
@@ -299,7 +297,7 @@ def health_check():
 
 @app.route('/api/joke', methods=['GET'])
 def get_joke():
-    """Возвращает случайную шутку про калькуляторы (для PRO модалки)"""
+    """Возвращает случайную шутку про калькуляторы"""
     jokes = [
         "Почему калькулятор пошел к психологу? У него были комплексы!",
         "Что сказал калькулятор своей жене? 'Дорогая, ты просто невыносима!'",
